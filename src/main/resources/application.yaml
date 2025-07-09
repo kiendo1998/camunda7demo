@@ -1,0 +1,21 @@
+spring.datasource.url: jdbc:h2:file:./camunda-h2-database
+server:
+  port: 8098
+camunda.bpm.admin-user:
+  id: admin
+  password: admin
+camunda.bpm.auth.enabled: false  # (mặc định là true)
+spring:
+  security:
+    enabled: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 1234
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
