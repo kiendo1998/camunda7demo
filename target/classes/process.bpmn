@@ -36,7 +36,7 @@
     <bpmn:sequenceFlow id="Flow_1bxf9z4" sourceRef="Gateway_06p3bhx" targetRef="Activity_0tidb2f">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${role == "head"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:serviceTask id="Activity_1y437jo" name="Tự động duyệt" camunda:class="com.example.workflow.delegate.AutoApproveDelegate">
+    <bpmn:serviceTask id="Activity_1y437jo" name="Tự động duyệt" camunda:class="com.example.workflow.controller.AutoApproveDelegate">
       <bpmn:incoming>Flow_1gbx8s3</bpmn:incoming>
       <bpmn:outgoing>Flow_029lv8f</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -56,7 +56,7 @@
       <bpmn:outgoing>Flow_07g1lp9</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_1f79m5g" sourceRef="Gateway_0sio2c5" targetRef="Gateway_16rm0bh">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approve == true}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${approve == "true"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:endEvent id="Event_0xzbagi" name="Phê duyệt thành công">
       <bpmn:incoming>Flow_06q1c0k</bpmn:incoming>
@@ -65,7 +65,7 @@
       <bpmn:incoming>Flow_0jnv3xy</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_06q1c0k" name="" sourceRef="Gateway_16rm0bh" targetRef="Event_0xzbagi">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">{completedBy=="director"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${completedBy=="director"}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:endEvent id="Event_0k7bnyk" name="Từ chối phê duyệt">
       <bpmn:incoming>Flow_1oylud4</bpmn:incoming>
@@ -73,13 +73,13 @@
       <bpmn:incoming>Flow_1aok77u</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1oylud4" sourceRef="Gateway_0sio2c5" targetRef="Event_0k7bnyk">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approve=="false"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${approve == "false"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_1kvkrp2" sourceRef="Gateway_16rm0bh" targetRef="Activity_120okpk">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${completedBy=="employee"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${completedBy == "employee"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_07g1lp9" sourceRef="Gateway_16rm0bh" targetRef="Activity_0tidb2f">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${completedBy=="head"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${completedBy == "head"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:exclusiveGateway id="Gateway_0epabcz" name="kiểm tra phê duyệt hay không">
       <bpmn:incoming>Flow_08vfzgz</bpmn:incoming>
@@ -87,11 +87,11 @@
       <bpmn:outgoing>Flow_15mideg</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_1pzg2nl" sourceRef="Gateway_0epabcz" targetRef="Event_0xzbagi">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approve=="true"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${approve == "true"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_08vfzgz" sourceRef="Activity_0tidb2f" targetRef="Gateway_0epabcz" />
     <bpmn:sequenceFlow id="Flow_15mideg" sourceRef="Gateway_0epabcz" targetRef="Event_0k7bnyk">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approve=="false"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${approve == "false"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:exclusiveGateway id="Gateway_09ke68m" name="kiểm tra phê duyệt hay không">
       <bpmn:incoming>Flow_0hp79k8</bpmn:incoming>
@@ -100,10 +100,10 @@
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_0hp79k8" sourceRef="Activity_120okpk" targetRef="Gateway_09ke68m" />
     <bpmn:sequenceFlow id="Flow_0tdp0ps" sourceRef="Gateway_09ke68m" targetRef="Gateway_1cptmhc">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approve=="true"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${approve == "true"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_1aok77u" sourceRef="Gateway_09ke68m" targetRef="Event_0k7bnyk">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approve=="false"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${approve == "false"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_029lv8f" sourceRef="Activity_1y437jo" targetRef="Event_0xzbagi" />
     <bpmn:exclusiveGateway id="Gateway_1cptmhc" name="kiểm tra người phê duyệt">
@@ -112,10 +112,10 @@
       <bpmn:outgoing>Flow_0jnv3xy</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_109faqk" sourceRef="Gateway_1cptmhc" targetRef="Activity_0tidb2f">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${completedBy=="head"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${completedBy == "head"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_0jnv3xy" sourceRef="Gateway_1cptmhc" targetRef="Event_0xzbagi">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${completedBy=="director"}</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"><![CDATA[${completedBy == "director"}]]></bpmn:conditionExpression>
     </bpmn:sequenceFlow>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
