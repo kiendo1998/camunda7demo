@@ -11,6 +11,7 @@ import org.camunda.bpm.engine.TaskService;
 import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.history.HistoricActivityInstance;
 import org.camunda.bpm.engine.history.HistoricIdentityLinkLog;
+import org.camunda.bpm.engine.history.HistoricVariableInstance;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.task.Task;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -65,11 +63,26 @@ public class ProcessController {
         variables.put("endDate", savedRequest.getEndDate());
 
         ProcessInstance instance = runtimeService.startProcessInstanceByKey("car_booking", variables);
+// Dùng historyService để lấy biến inventoryOk khi process đã kết thúc
+        HistoricVariableInstance inventoryOkVar = historyService
+                .createHistoricVariableInstanceQuery()
+                .processInstanceId(instance.getProcessInstanceId())
+                .variableName("inventoryOk")
+                .singleResult();
 
+        if (inventoryOkVar != null && Boolean.FALSE.equals(inventoryOkVar.getValue())) {
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("error", "Xe không đủ tồn kho để đặt");
+            resultMap.put("processInstanceId", instance.getProcessInstanceId());
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(resultMap);
+        }
         savedRequest.setProcessInstanceKey(instance.getProcessInstanceId());
         savedRequest.setProcessDefinitionKey(instance.getProcessDefinitionId());
         carRequestRepository.save(savedRequest);
-        List<Map<String, Object>> history = getHistory(instance.getProcessInstanceId(), "userTask");
+        String filterType = Objects.equals(savedRequest.getRole(), "director") ? null: "userTask";
+        List<Map<String, Object>> history = getHistory(instance.getProcessInstanceId(), filterType);
         Map<String, Object> result = history.get(history.size()-1);
         result.put("processInstanceId", instance.getProcessInstanceId());
         return ResponseEntity.ok(result);
@@ -142,7 +155,11 @@ public class ProcessController {
                         status = "completed";
                     }
                     map.put("status", status);
-
+                    Map<String, Integer> roleOrder = Map.of(
+                            "employee", 1,
+                            "head", 2,
+                            "director", 3
+                    );
                     // ✅ Nếu là userTask, thêm candidateGroups
                     if ("userTask".equals(h.getActivityType()) && h.getTaskId() != null) {
                         List<String> candidateGroups = historyService
@@ -154,6 +171,7 @@ public class ProcessController {
                                 .map(HistoricIdentityLinkLog::getGroupId)
                                 .filter(Objects::nonNull)
                                 .distinct()
+                                .sorted(Comparator.comparingInt(g -> roleOrder.getOrDefault(g, Integer.MAX_VALUE)))
                                 .collect(Collectors.toList());
                         map.put("candidateGroups", candidateGroups);
                     }
@@ -216,6 +234,9 @@ public class ProcessController {
             @RequestParam(name="status",defaultValue = "all") String status // running, completed, all
     ) {
         List<Map<String, Object>> results = new java.util.ArrayList<>();
+        List<Map<String, Object>> runningResults = new java.util.ArrayList<>();
+
+        List<Map<String, Object>> completedResults = new java.util.ArrayList<>();
 
         // Lọc theo trạng thái
         if (!status.equals("completed")) {
@@ -229,18 +250,34 @@ public class ProcessController {
             }
 
             List<ProcessInstance> runningInstances = runningQuery.list();
-
             for (ProcessInstance pi : runningInstances) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", pi.getId());
                 map.put("definitionId", pi.getProcessDefinitionId());
                 map.put("definitionKey", pi.getProcessDefinitionKey());
-                map.put("status", "completed");
+                map.put("status", "running");
                 map.put("isEnded", pi.isEnded());
                 map.put("businessKey", pi.getBusinessKey());
                 map.put("variables", runtimeService.getVariables(pi.getId()));
-                results.add(map);
+                runningResults.add(map);
             }
+            runningResults.sort((a, b) -> {
+                Object r1 = ((Map<String, Object>) a.get("variables")).get("requestId");
+                Object r2 = ((Map<String, Object>) b.get("variables")).get("requestId");
+
+                if (r1 == null && r2 == null) return 0;
+                if (r1 == null) return 1;
+                if (r2 == null) return -1;
+
+                try {
+                    Long id1 = Long.valueOf(r1.toString());
+                    Long id2 = Long.valueOf(r2.toString());
+                    return id2.compareTo(id1); // giảm dần
+                } catch (NumberFormatException e) {
+                    return r2.toString().compareTo(r1.toString()); // fallback theo string
+                }
+            });
+
         }
 
         if (!status.equals("running")) {
@@ -254,14 +291,13 @@ public class ProcessController {
             }
 
             List<org.camunda.bpm.engine.history.HistoricProcessInstance> completedInstances = historicQuery.list();
-
             for (var pi : completedInstances) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", pi.getId());
                 map.put("definitionId", pi.getProcessDefinitionId());
                 map.put("definitionKey", pi.getProcessDefinitionKey());
                 map.put("isEnded", true);
-                map.put("status", "running");
+                map.put("status", "completed");
                 map.put("startTime", pi.getStartTime());
                 map.put("endTime", pi.getEndTime());
                 map.put("variables", historyService.createHistoricVariableInstanceQuery()
@@ -272,10 +308,20 @@ public class ProcessController {
                                 v -> v.getName(),
                                 v -> v.getValue()
                         )));
-                results.add(map);
+                completedResults.add(map);
             }
+            completedResults.sort((a, b) -> {
+                Date t1 = (Date) a.get("startTime");
+                Date t2 = (Date) b.get("startTime");
+                if (t1 == null && t2 == null) return 0;
+                if (t1 == null) return 1;
+                if (t2 == null) return -1;
+                return t2.compareTo(t1);
+            });
         }
-
+// ✅ Sắp xếp theo startTime giảm dần (mới nhất trước)
+        results.addAll(runningResults);
+        results.addAll(completedResults);
         return ResponseEntity.ok(results);
     }
 
