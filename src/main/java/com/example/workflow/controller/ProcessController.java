@@ -63,6 +63,9 @@ public class ProcessController {
         variables.put("endDate", savedRequest.getEndDate());
 
         ProcessInstance instance = runtimeService.startProcessInstanceByKey("car_booking", variables);
+        savedRequest.setProcessInstanceKey(instance.getProcessInstanceId());
+        savedRequest.setProcessDefinitionKey(instance.getProcessDefinitionId());
+        carRequestRepository.save(savedRequest);
 // Dùng historyService để lấy biến inventoryOk khi process đã kết thúc
         HistoricVariableInstance inventoryOkVar = historyService
                 .createHistoricVariableInstanceQuery()
@@ -78,9 +81,7 @@ public class ProcessController {
                     .status(HttpStatus.BAD_REQUEST)
                     .body(resultMap);
         }
-        savedRequest.setProcessInstanceKey(instance.getProcessInstanceId());
-        savedRequest.setProcessDefinitionKey(instance.getProcessDefinitionId());
-        carRequestRepository.save(savedRequest);
+
         String filterType = Objects.equals(savedRequest.getRole(), "director") ? null: "userTask";
         List<Map<String, Object>> history = getHistory(instance.getProcessInstanceId(), filterType);
         Map<String, Object> result = history.get(history.size()-1);
